@@ -92,7 +92,16 @@ With Cloud Run:
 ### What changed in this repository for that preparation?
 
 - The container startup now honors a `PORT` environment variable so it can work in Cloud Run-style environments.
+- The app accepts both the existing `DATABASE_MASTER_URL` / `DATABASE_REPLICA_URL` values and cloud-style `DATABASE_URL` / `DATABASE_URL_READ` values.
+- A Cloud Run deployment template and a deployment script stub are included for later use with real credentials.
 - The app is still compatible with the existing local Docker Compose flow.
+
+### Files added for the cloud-prep branch
+
+- [cloudbuild.yaml](cloudbuild.yaml) – a Google Cloud Build template for building and deploying the service.
+- [scripts/deploy-cloudrun.sh](scripts/deploy-cloudrun.sh) – a shell template showing the deployment flow.
+- [.gcloudignore](.gcloudignore) – a cloud-build-friendly ignore file for lighter uploads.
+- [docs/cloud-run-prep.md](docs/cloud-run-prep.md) – a concise explanation of the migration path from manual workers to managed Cloud Run instances.
 
 ### What you would do later with real Cloud Run credentials
 

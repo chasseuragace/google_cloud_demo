@@ -7,8 +7,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-master_url = settings.database_master_url or os.environ.get("DATABASE_MASTER_URL") or "sqlite:///./app.db"
-replica_url = settings.database_replica_url or os.environ.get("DATABASE_REPLICA_URL") or "sqlite:///./app.db"
+master_url = settings.master_url or os.environ.get("DATABASE_MASTER_URL") or os.environ.get("DATABASE_URL") or "sqlite:///./app.db"
+replica_url = settings.replica_url or os.environ.get("DATABASE_REPLICA_URL") or os.environ.get("DATABASE_URL_READ") or os.environ.get("DATABASE_URL") or "sqlite:///./app.db"
 
 engine_kwargs = {"pool_size": 5, "pool_pre_ping": True}
 if master_url.startswith("sqlite"):
