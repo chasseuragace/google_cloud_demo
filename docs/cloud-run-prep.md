@@ -165,10 +165,10 @@ What you would do:
 - and collect the connection string.
 
 Then you would feed that to the app through environment variables such as:
-- `DATABASE_URL` for the main connection,
-- `DATABASE_URL_READ` for the read path if you want separate read/write endpoints.
+- `DATABASE_URL` for the primary/write connection,
+- `DATABASE_URL_READ` for the replica/read connection.
 
-This is the Cloud-native equivalent of the local master/replica story in your current repo.
+This preserves the same architectural intent as the original repo: writes go to the primary, reads can go to the replica, and the replica is kept in sync with the primary through the managed database service.
 
 ### Step 4: Provision managed Redis
 The local version of this repo also uses a Redis container in [docker-compose.yml](docker-compose.yml). In Cloud Run, that should be replaced by a managed Redis service, such as Memorystore or any other accessible Redis endpoint.
