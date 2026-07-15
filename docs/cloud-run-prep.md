@@ -158,15 +158,17 @@ Why this matters:
 - local containers are not a real production-grade storage solution,
 - and Cloud Run instances should not depend on a database inside a container that can disappear on restart.
 
-What you would do:
-- create a Cloud SQL for PostgreSQL instance,
-- create a database for the app,
-- create a user with permissions,
-- and collect the connection string.
-
-Then you would feed that to the app through environment variables such as:
-- `DATABASE_URL` for the primary/write connection,
-- `DATABASE_URL_READ` for the replica/read connection.
+What you would do, step by step:
+1. Create a Cloud SQL for PostgreSQL instance in the same Google Cloud project.
+2. Create a database inside that instance, for example `issues`.
+3. Create a database user with at least read/write privileges for that database.
+4. Enable the database’s private networking or public access depending on your security model.
+5. Create the primary/write connection string in the form:
+   `postgresql+psycopg2://<user>:<password>@<host>:5432/<database>`
+6. If you want to preserve the read-replica pattern, create a read replica or read endpoint from the managed service and capture its connection string separately.
+7. Store those values as environment variables for the Cloud Run service:
+   - `DATABASE_URL` for the primary/write connection,
+   - `DATABASE_URL_READ` for the replica/read connection.
 
 This preserves the same architectural intent as the original repo: writes go to the primary, reads can go to the replica, and the replica is kept in sync with the primary through the managed database service.
 
