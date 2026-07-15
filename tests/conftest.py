@@ -1,5 +1,6 @@
-import time
+import os
 import subprocess
+import time
 
 import psycopg2
 import pytest
@@ -36,9 +37,10 @@ def wait_for_stack():
     run (see README). We just wait for things to be reachable rather than
     starting/stopping compose ourselves, so tests stay fast to re-run.
     """
-    _wait_for(f"{LB_URL}/health")
-    for url in WORKER_URLS.values():
-        _wait_for(f"{url}/health")
+    if os.environ.get("UNIT_TEST_ONLY") != "1":
+        _wait_for(f"{LB_URL}/health")
+        for url in WORKER_URLS.values():
+            _wait_for(f"{url}/health")
 
 
 @pytest.fixture

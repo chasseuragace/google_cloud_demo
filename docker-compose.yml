@@ -11,7 +11,9 @@ services:
       - worker3
 
   worker1:
-    build: ./app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
     ports:
       - "8001:8000"
     environment:
@@ -28,7 +30,9 @@ services:
         condition: service_healthy
 
   worker2:
-    build: ./app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
     ports:
       - "8002:8000"
     environment:
@@ -45,7 +49,9 @@ services:
         condition: service_healthy
 
   worker3:
-    build: ./app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
     ports:
       - "8003:8000"
     environment:
@@ -95,7 +101,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
