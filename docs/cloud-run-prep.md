@@ -121,9 +121,140 @@ If someone asked you, “How is this repo prepared for Google Cloud Run?”, you
 
 ## 9. What you should focus on next
 
-If you had real Google Cloud credentials, the next steps would be:
-1. replace the placeholder URLs in [scripts/deploy-cloudrun.sh](scripts/deploy-cloudrun.sh) with actual service endpoints,
-2. configure Cloud SQL / Redis endpoints and credentials,
-3. run the Cloud Build pipeline from [cloudbuild.yaml](cloudbuild.yaml),
-4. deploy the service with Cloud Run,
-5. verify health and connectivity from the live environment.
+If you had real Google Cloud credentials, the deployment path would look like this.
+
+### Step 1: Create or select a Google Cloud project
+You would first create or select a Google Cloud project in the Google Cloud Console.
+
+Why this matters:
+- every Cloud Run deployment belongs to a project,
+- IAM permissions and billing are scoped to that project,
+- and the deployment artifacts in [cloudbuild.yaml](cloudbuild.yaml) and [scripts/deploy-cloudrun.sh](scripts/deploy-cloudrun.sh) assume a target project.
+
+What you would do:
+- create a project,
+- enable the Cloud Run API,
+- enable Cloud Build API,
+- and enable the APIs required for your database and cache services.
+
+### Step 2: Set up authentication and credentials
+You would need credentials to authenticate with the Google Cloud CLI and to let the build/deploy pipeline access your project.
+
+Why this matters:
+- without credentials, you cannot push images, deploy services, or manage cloud resources.
+- this is the first hard requirement for real deployment.
+
+What you would do:
+- install the Google Cloud CLI,
+- authenticate with `gcloud auth login`,
+- set the active project with `gcloud config set project <PROJECT_ID>`,
+- and, if needed, create a service account with deployment permissions.
+
+### Step 3: Provision managed PostgreSQL
+The current repository originally used a local master/replica PostgreSQL setup in [docker-compose.yml](docker-compose.yml). In Google Cloud, you would replace that local topology with a managed PostgreSQL service such as Cloud SQL.
+
+Why this matters:
+- the app needs a durable database,
+- local containers are not a real production-grade storage solution,
+- and Cloud Run instances should not depend on a database inside a container that can disappear on restart.
+
+What you would do:
+- create a Cloud SQL for PostgreSQL instance,
+- create a database for the app,
+- create a user with permissions,
+- and collect the connection string.
+
+Then you would feed that to the app through environment variables such as:
+- `DATABASE_URL` for the main connection,
+- `DATABASE_URL_READ` for the read path if you want separate read/write endpoints.
+
+This is the Cloud-native equivalent of the local master/replica story in your current repo.
+
+### Step 4: Provision managed Redis
+The local version of this repo also uses a Redis container in [docker-compose.yml](docker-compose.yml). In Cloud Run, that should be replaced by a managed Redis service, such as Memorystore or any other accessible Redis endpoint.
+
+Why this matters:
+- the shared cache needs to survive instance recreation,
+- and multiple Cloud Run instances need a common place to store cache values.
+
+What you would do:
+- create a Redis instance in Memorystore or use another managed Redis service,
+- note its host, port, and authentication details,
+- and set `REDIS_URL` in the Cloud Run service configuration.
+
+### Step 5: Replace local-only placeholders with real environment values
+The deployment script in [scripts/deploy-cloudrun.sh](scripts/deploy-cloudrun.sh) and the example values in [cloudbuild.yaml](cloudbuild.yaml) currently contain placeholders.
+
+Why this matters:
+- the app cannot connect to real services without real environment values,
+- and those values must be injected at deploy time.
+
+What you would do:
+- replace the placeholder database URIs with the actual Cloud SQL connection strings,
+- replace the placeholder Redis URL with the actual managed Redis endpoint,
+- and pass those values as secret or environment variables in the Cloud Run service definition.
+
+### Step 6: Build and push the container image
+The repository already includes [cloudbuild.yaml](cloudbuild.yaml), which describes a standard build flow:
+- build the container,
+- push it to Container Registry or Artifact Registry,
+- and deploy it.
+
+Why this matters:
+- Cloud Run deploys from a container image,
+- so the image must be built and stored in a registry that the platform can access.
+
+What you would do:
+- run the Cloud Build pipeline or manually build and push the image,
+- confirm that the image is available in Artifact Registry,
+- and proceed to deployment.
+
+### Step 7: Deploy the service to Cloud Run
+Once the image is available, you would deploy the service to Cloud Run.
+
+Why this matters:
+- this is the actual point where the container becomes a live service with auto-scaling and managed traffic routing.
+
+What you would do:
+- use the Cloud Run deploy command from [scripts/deploy-cloudrun.sh](scripts/deploy-cloudrun.sh),
+- set the runtime environment variables,
+- specify the region,
+- and enable or disable unauthenticated access depending on your needs.
+
+### Step 8: Verify health and connectivity
+After deployment, you would verify that the app is reachable and that the database/cache integration works.
+
+Why this matters:
+- deployment success is not just “the command returned successfully”;
+- you must prove that the service can actually connect to its backing services.
+
+What you would do:
+- call the `/health` endpoint,
+- check database connectivity,
+- confirm Redis cache traffic is working,
+- and inspect logs if the service fails to start.
+
+### Step 9: Review what changes compared to the earlier local demo
+This is the conceptual summary you should keep in mind.
+
+In the old manual setup:
+- you had explicit worker containers and an Nginx load balancer in [docker-compose.yml](docker-compose.yml),
+- you managed the topology yourself,
+- and you ran the database and cache locally.
+
+In the Cloud Run setup:
+- you deploy a single service,
+- Cloud Run creates and scales instances for you,
+- and you rely on managed services for Postgres and Redis.
+
+That is the core architectural change.
+
+## 10. The practical answer to your earlier questions
+
+Yes, your list is basically correct.
+
+1. You would need credentials.
+2. You would need to configure managed PostgreSQL and Redis, replacing the local manual services from the earlier demo.
+3. The later steps of building, deploying, and validating the service are the natural follow-up actions.
+
+The main difference is that in the local repo, the infrastructure was visible and manual. In the cloud version, that infrastructure becomes managed by Google Cloud, while your application responsibilities shift to portability, configuration, and statelessness.
