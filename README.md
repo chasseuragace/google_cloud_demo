@@ -72,6 +72,38 @@ non-replicated, non-load-balanced setup. These tests are specifically
 designed to fail if the *scalability infrastructure* is fake or misconfigured
 (as the original doc's compose file was).
 
+## Google Cloud Run preparation (no credentials required)
+
+This branch is intentionally focused on understanding the difference between the current Docker/Nginx model and a Cloud Run deployment model. No Google Cloud credentials or account are required to follow along.
+
+### What changes when moving to Cloud Run?
+
+With the current Docker Compose setup:
+- Nginx is the explicit entrypoint.
+- The upstream pool contains three fixed workers: `worker1`, `worker2`, and `worker3`.
+- You manually decide how requests are routed and which services are available.
+
+With Cloud Run:
+- You deploy a single service instead of managing a fixed worker pool.
+- Google handles request distribution across dynamically created instances.
+- You do not need to manage `worker1/worker2/worker3` in your own config.
+- The app should be stateless and rely on shared services such as Cloud SQL and Memorystore/Redis.
+
+### What changed in this repository for that preparation?
+
+- The container startup now honors a `PORT` environment variable so it can work in Cloud Run-style environments.
+- The app is still compatible with the existing local Docker Compose flow.
+
+### What you would do later with real Cloud Run credentials
+
+In a real Cloud Run setup, you would typically:
+1. Build and push the image to Artifact Registry.
+2. Deploy the service with `gcloud run deploy`.
+3. Configure environment variables for the database and Redis endpoints.
+4. Enable autoscaling and set memory/CPU limits.
+
+For now, the goal is to understand the architecture shift rather than actually deploy anything.
+
 ## Tear down
 
 ```bash
