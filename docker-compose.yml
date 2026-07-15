@@ -1,0 +1,107 @@
+services:
+  loadbalancer:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - worker1
+      - worker2
+      - worker3
+
+  worker1:
+    build: ./app
+    ports:
+      - "8001:8000"
+    environment:
+      - WORKER_ID=worker1
+      - DATABASE_MASTER_URL=postgresql+psycopg2://postgres:password@postgres_master:5432/issues
+      - DATABASE_REPLICA_URL=postgresql+psycopg2://postgres:password@postgres_replica:5432/issues
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+      postgres_replica:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  worker2:
+    build: ./app
+    ports:
+      - "8002:8000"
+    environment:
+      - WORKER_ID=worker2
+      - DATABASE_MASTER_URL=postgresql+psycopg2://postgres:password@postgres_master:5432/issues
+      - DATABASE_REPLICA_URL=postgresql+psycopg2://postgres:password@postgres_replica:5432/issues
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+      postgres_replica:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  worker3:
+    build: ./app
+    ports:
+      - "8003:8000"
+    environment:
+      - WORKER_ID=worker3
+      - DATABASE_MASTER_URL=postgresql+psycopg2://postgres:password@postgres_master:5432/issues
+      - DATABASE_REPLICA_URL=postgresql+psycopg2://postgres:password@postgres_replica:5432/issues
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+      postgres_replica:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  postgres_master:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: issues
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_master_data:/var/lib/postgresql/data
+      - ./replica-init/master-init.sh:/docker-entrypoint-initdb.d/master-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  postgres_replica:
+    build:
+      context: ./replica-init
+      dockerfile: Dockerfile.replica
+    ports:
+      - "5434:5432"
+    environment:
+      PGUSER: postgres
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_master_data:
+  postgres_replica_data:

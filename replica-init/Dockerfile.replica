@@ -1,0 +1,6 @@
+FROM postgres:16
+
+COPY replica-entrypoint.sh /replica-entrypoint.sh
+RUN chmod +x /replica-entrypoint.sh
+
+ENTRYPOINT ["/replica-entrypoint.sh"]
